@@ -36,19 +36,20 @@ def get_url(stage, unit, page, df):
 def base64_to_image(encoded_string):
     return base64.b64decode(encoded_string)
 
-def calculateHits(series: pd.Series):
-
+def calculateHits(series: pd.Series, hit_modifier:int, save_roll: int, wound_roll:int = None):
+    net_bs = series.BS - hit_modifier
     hits = dict()
     for p, q in PROB_MAP.items():
         nHits = (
             series.A 
-            * (PROB_MAP[series.BS] / 6)
+            * (PROB_MAP[net_bs] / 6)
             * (q / 6)
-            * (min(PROB_MAP[save_roll_ass] / 6, 1))
-        )
-        hits[p] = nHits
+            * (min(PROB_MAP[save_roll] / 6, 1))
+        ).round(2)
+        hits[f"{p}+"] = [nHits]
     
     return hits
+
 
 remove_int = lambda s: re.sub(r'\d', '', s)
 
@@ -70,7 +71,7 @@ if not st.session_state["authenticated"]:
     welcome_screen = st.empty()
 
     with welcome_screen:
-        c, _ = st.columns((1,3))
+        c, _ = st.columns((2,3))
         with c:
             with st.form("Credentials"):
                 username = st.text_input("Username")
@@ -81,10 +82,10 @@ if not st.session_state["authenticated"]:
     if login:
         params = {
             "account": st.secrets.snowflake_warhammer["ACCOUNT"],
-            "user": username, # ask for input
-            "password": password, # ask for input
+            "user": username,
+            "password": password,
             "database": st.secrets.snowflake_warhammer["DATABASE"],
-            "schema": st.secrets.snowflake_warhammer["SCHEMA"] # ask for input
+            "schema": st.secrets.snowflake_warhammer["SCHEMA"]
         }  
 
         # Session and data
@@ -96,35 +97,49 @@ if not st.session_state["authenticated"]:
 if not st.session_state.authenticated:
     st.stop()
 
-units = get_data("select * from dim_units")
-weapons = get_data("select * from dim_weapons")
-keywords = get_data("select * from dim_keywords")
-images = get_data("select * from dim_images")
+tables = {
+    "units": None,
+    "weapons": None,
+    "keywords": None,
+    "images": None
+}
 
-units.set_index("NAME", inplace=True)
+progress = st.progress(0, "Loading Data...")
+
+for i, table in enumerate(tables.keys()):
+    tables[table] = get_data(f"select * from dim_{table}")
+    progress.progress(i / len(tables), "Loading Data...")
+
+progress.empty()
+
+all_units, weapons, keywords, images = tables.values()
+
+all_units.set_index("NAME", inplace=True)
 weapons.set_index("WEAPONS", inplace=True)
 keywords.set_index("ABILITY", inplace=True)
 images.set_index("NAME", inplace=True)
 
-left, _, main, right = st.columns([0.3, 0.1, 0.7, 0.4])
-
 # Sidebar
 with st.sidebar:
     st.write ("### Options")
-    faction = st.selectbox("Select Faction", options = units.RACE.unique())
+    faction = st.selectbox("Select Faction", options = all_units.RACE.unique())
     show_image = st.checkbox("Show datasheet as image", value = True)
     show_table = st.checkbox("Show datasheet as text", value = False)
     show_page_two = st.checkbox("Show second page", value = False)
     show_damage_calc = st.checkbox("Show Damage Calc", value = False)
-    if show_damage_calc:
-        save_roll_ass = st.number_input("Assumed Save Roll", min_value = 2, max_value = 6, value = 3, step=1)
     
     kwd = st.multiselect('Keyword Definions', options = keywords.index)
 
     if kwd:
         st.write(keywords.loc[kwd])
 
-units = units.query(f"RACE == '{faction}'")
+    width = st.slider("Reduce info sheet width", min_value = 1, max_value = 1000)
+
+
+left, main, _ = st.columns([3, 7, 0.01*width])
+
+# filter out units
+units = all_units.query(f"RACE == '{faction}'")
 
 with left:
     f'# {faction.capitalize()}'
@@ -175,6 +190,23 @@ with main:
 
             
             if show_damage_calc:
+                st.write("#### Expected Hits")
+                # modifiers
+                c1, c2, c3, c4 = st.columns(4)
+                hit_modifier = c1.number_input("Net Hit Modifier", min_value = -1, max_value = 1, value = 0, step = 1)
+                # wound_roll = c2.number_input("Wound Roll", min_value = -1, max_value = 1, value = 0, step = 1)
+                save_roll = c3.number_input("Save Roll", min_value = 2, max_value = 6, value = 3, step=1)
+                # feel_no_pain = c4.number_input("Feel No Pain", min_value = 2, max_value = 7, value = 7, step = 1)
+                # display
+                c1, c2, c3 = st.columns(3)
+                n_models = c1.number_input("Num. Models Attacking", min_value = 1, value = 1, step = 1)
                 unit_weapons = sw_df[sw_df.UNITS == selected_unit]
                 for weapon in unit_weapons.index:
-                    st.write(calculateHits(unit_weapons.loc[weapon]))
+                    st.markdown(f"**Expected Hits with {weapon} and wound roll of**")
+                    expected_hits = calculateHits(
+                        unit_weapons.loc[weapon],
+                        hit_modifier=hit_modifier,
+                        # wound_roll,
+                        save_roll=save_roll
+                    )
+                    st.write(pd.DataFrame(expected_hits)*n_models)
