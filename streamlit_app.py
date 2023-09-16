@@ -4,11 +4,8 @@ import urllib.request
 
 import streamlit as st
 import pandas as pd
-from google.oauth2 import service_account
-from gsheetsdb import connect
 
 from snowflake import snowpark
-from dotenv import load_dotenv
 
 st.set_page_config(
     layout='wide'
