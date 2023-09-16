@@ -1,6 +1,4 @@
-import re, os, base64
-from PIL import Image
-import urllib.request
+import re, base64
 
 import streamlit as st
 import pandas as pd
@@ -29,12 +27,6 @@ def build_session(params):
 @st.cache_data
 def get_data(query):
     return session.sql(query).to_pandas()
-
-@st.cache_data
-def get_image_from_url(url):
-    st.write(url)
-    urllib.request.urlretrieve(url, "image.png")
-    return Image.open("image.png")
 
 def get_url(stage, unit, page, df):
     path = df[df.RELATIVE_PATH.str.contains(f"{unit} \({page}\)")].RELATIVE_PATH.values[0]
