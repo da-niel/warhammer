@@ -6,7 +6,9 @@ import pandas as pd
 from snowflake import snowpark
 
 st.set_page_config(
-    layout='wide'
+    layout='wide',
+    page_title='40k Codex',
+    page_icon=':crossed_swords:'
 )
 
 # DICE_ROLL to PROBABILITY mapping
@@ -36,17 +38,17 @@ def get_url(stage, unit, page, df):
 def base64_to_image(encoded_string):
     return base64.b64decode(encoded_string)
 
-def calculateHits(series: pd.Series, hit_modifier:int, save_roll: int, wound_roll:int = None):
+def calculate_hits(series: pd.Series, hit_modifier:int, save_roll: int, wound_roll:int = None):
     net_bs = series.BS - hit_modifier
     hits = dict()
     for p, q in PROB_MAP.items():
-        nHits = (
+        num_hits = (
             series.A 
             * (PROB_MAP[net_bs] / 6)
             * (q / 6)
-            * (min(PROB_MAP[save_roll] / 6, 1))
+            * (1 - (PROB_MAP[save_roll] / 6))
         ).round(2)
-        hits[f"{p}+"] = [nHits]
+        hits[f"{p}+"] = [num_hits]
     
     return hits
 
@@ -127,22 +129,31 @@ with st.sidebar:
     show_table = st.checkbox("Show datasheet as text", value = False)
     show_page_two = st.checkbox("Show second page", value = False)
     show_damage_calc = st.checkbox("Show Damage Calc", value = False)
-    
     kwd = st.multiselect('Keyword Definions', options = keywords.index)
-
     if kwd:
         st.write(keywords.loc[kwd])
 
-    width = st.slider("Reduce info sheet width", min_value = 1, max_value = 1000)
+    show_motto = st.checkbox(":eyes:", value = False)   
 
 
-left, main, _ = st.columns([3, 7, 0.01*width])
+left, main = st.columns([2.5, 7])
 
 # filter out units
 units = all_units.query(f"RACE == '{faction}'")
 
+# no bias here
+MOTTO = {
+    "Aeldari": "The Cool. The Awesome. The Aeldari.",
+    "Orks": "The Green. The Ugly. The Orks.",
+    "Chaos Space Marines": "The Few. The Weak. The Marines."
+}
+
 with left:
-    f'# {faction.capitalize()}'
+    if show_motto:
+        f'# {faction}'
+        f'### {MOTTO[faction]}'
+    else:
+        f'# {faction}'
 
     selected_units = st.multiselect(label = 'Units', options = units.index.unique())
 
@@ -193,17 +204,34 @@ with main:
                 st.write("#### Expected Hits")
                 # modifiers
                 c1, c2, c3, c4 = st.columns(4)
-                hit_modifier = c1.number_input("Net Hit Modifier", min_value = -1, max_value = 1, value = 0, step = 1)
+                hit_modifier = c1.number_input(
+                    "Net Hit Modifier", 
+                    min_value = -1, 
+                    max_value = 1, 
+                    value = 0, 
+                    step = 1
+                )
                 # wound_roll = c2.number_input("Wound Roll", min_value = -1, max_value = 1, value = 0, step = 1)
-                save_roll = c3.number_input("Save Roll", min_value = 2, max_value = 6, value = 3, step=1)
+                save_roll = c3.number_input(
+                    "Save Roll", 
+                    min_value = 2, 
+                    max_value = 6, 
+                    value = 3, 
+                    step=1
+                )
                 # feel_no_pain = c4.number_input("Feel No Pain", min_value = 2, max_value = 7, value = 7, step = 1)
                 # display
                 c1, c2, c3 = st.columns(3)
-                n_models = c1.number_input("Num. Models Attacking", min_value = 1, value = 1, step = 1)
+                n_models = c1.number_input(
+                    "Num. Models Attacking",
+                    min_value = 1, 
+                    value = 1, 
+                    step = 1
+                )
                 unit_weapons = sw_df[sw_df.UNITS == selected_unit]
                 for weapon in unit_weapons.index:
                     st.markdown(f"**Expected Hits with {weapon} and wound roll of**")
-                    expected_hits = calculateHits(
+                    expected_hits = calculate_hits(
                         unit_weapons.loc[weapon],
                         hit_modifier=hit_modifier,
                         # wound_roll,
