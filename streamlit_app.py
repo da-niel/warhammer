@@ -7,7 +7,7 @@ from snowflake import snowpark
 
 st.set_page_config(
     layout='wide',
-    page_title='40k Codex',
+    page_title='40k Emporium',
     page_icon=':crossed_swords:'
 )
 
@@ -67,14 +67,16 @@ def process_keyword(kw):
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
 
-st.write("# Warhammer")
 
 if not st.session_state["authenticated"]:
     welcome_screen = st.empty()
 
     with welcome_screen:
+
+
         c, _ = st.columns((2,3))
         with c:
+            c.write(f"# The 40K Emporium")
             with st.form("Credentials"):
                 username = st.text_input("Username")
                 password = st.text_input("Password", type='password')
@@ -157,15 +159,22 @@ with left:
 
     selected_units = st.multiselect(label = 'Units', options = units.index.unique())
 
-    skw_list = []
-    for kws in weapons.loc[weapons.UNITS.isin(selected_units)].KEYWORDS:
-        skw_list.extend(kws.split(","))
+    weapon_keywords_list = []
+    for keywds in weapons.loc[weapons.UNITS.isin(selected_units)].KEYWORDS:
+        weapon_keywords_list.extend(keywds.split(","))
 
-    skw_set = {process_keyword(kw) for kw in skw_list}
+    character_keywords_list = []
+    for keywds in units.loc[units.index.isin(selected_units)].CORE:
+        character_keywords_list.extend(keywds.split(","))
+
+    weapon_keywords_set = {process_keyword(kw) for kw in weapon_keywords_list}
+    character_keywords_set = {process_keyword(kw) for kw in character_keywords_list}
+
+    unit_keywords_set = weapon_keywords_set.union(character_keywords_set)
 
     # show keywords
     st.write("### Keywords")
-    for kw in skw_set:
+    for kw in unit_keywords_set:
         if kw.lower() != 'none':
             try:
                 st.write(f"**{kw}**")
