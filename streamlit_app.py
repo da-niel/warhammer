@@ -161,11 +161,17 @@ with left:
 
     weapon_keywords_list = []
     for keywds in weapons.loc[weapons.UNITS.isin(selected_units)].KEYWORDS:
-        weapon_keywords_list.extend(keywds.split(","))
+        try:
+            weapon_keywords_list.extend(keywds.split(","))
+        except AttributeError:
+            print(f"No keyword found")
 
     character_keywords_list = []
     for keywds in units.loc[units.index.isin(selected_units)].CORE:
-        character_keywords_list.extend(keywds.split(","))
+        try:
+            character_keywords_list.extend(keywds.split(","))
+        except AttributeError:
+            print(f"No keyword found")
 
     weapon_keywords_set = {process_keyword(kw) for kw in weapon_keywords_list}
     character_keywords_set = {process_keyword(kw) for kw in character_keywords_list}
