@@ -132,7 +132,7 @@ images.set_index("NAME", inplace=True)
 
 # Sidebar
 with st.sidebar:
-    st.write ("### Options")
+    st.write("### Options")
     faction = st.selectbox("Select Faction", options = all_units.RACE.unique())
     show_image = st.checkbox("Show datasheet as image", value = True)
     show_table = st.checkbox("Show datasheet as text", value = False)
@@ -160,7 +160,7 @@ MOTTO = {
 with left:
     if show_motto:
         f'# {faction}'
-        f'### {MOTTO[faction]}'
+        st.caption(f'{MOTTO[faction]}')
     else:
         f'# {faction}'
 
