@@ -159,11 +159,9 @@ MOTTO = {
 }
 
 with left:
+    f'# {faction}'
     if show_motto:
-        f'# {faction}'
         st.caption(f'{MOTTO[faction]}')
-    else:
-        f'# {faction}'
 
     selected_units = st.multiselect(label = 'Units', options = units.index.unique())
 
