@@ -30,24 +30,34 @@ def build_session(params):
 def get_data(query):
     return session.sql(query).to_pandas()
 
-def get_url(stage, unit, page, df):
-    path = df[df.RELATIVE_PATH.str.contains(f"{unit} \({page}\)")].RELATIVE_PATH.values[0]
-    url_df = get_data(f"select BUILD_STAGE_FILE_URL( @{stage} , '{path}') as url")
-    return url_df.iloc[0,0]
-
 def base64_to_image(encoded_string):
     return base64.b64decode(encoded_string)
 
 def calculate_hits(series: pd.Series, hit_modifier:int, save_roll: int, wound_roll:int = None):
-    net_bs = series.BS - hit_modifier
+    # series.A could be D3
+    try:
+        A = int(series.A)
+    except ValueError:
+        A = float(series.A[1:]) / 2 # D3 -> 1.5
+    
+    
+    try:
+        BS = int(series.BS)
+    except ValueError:
+        # series.BS could be N/A
+        net_bs = 1
+    else:
+        net_bs = BS - hit_modifier
+
     hits = dict()
     for p, q in PROB_MAP.items():
-        num_hits = (
-            series.A 
+        num_hits = round(
+            A 
             * (PROB_MAP[net_bs] / 6)
             * (q / 6)
             * (1 - (PROB_MAP[save_roll] / 6))
-        ).round(2)
+            , 2
+        )
         hits[f"{p}+"] = [num_hits]
     
     return hits
@@ -72,11 +82,9 @@ if not st.session_state["authenticated"]:
     welcome_screen = st.empty()
 
     with welcome_screen:
-
-
-        c, _ = st.columns((2,3))
-        with c:
-            c.write(f"# The 40K Emporium")
+        c = st.columns((2,3))
+        with c[0]:
+            st.write(f"# The 40K Emporium")
             with st.form("Credentials"):
                 username = st.text_input("Username")
                 password = st.text_input("Password", type='password')
@@ -96,7 +104,6 @@ if not st.session_state["authenticated"]:
         session = build_session(params)
         welcome_screen.empty()
         st.session_state['authenticated'] = True
-
 
 if not st.session_state.authenticated:
     st.stop()
@@ -217,6 +224,7 @@ with main:
             
             if show_damage_calc:
                 st.write("#### Expected Hits")
+                st.caption("Does not account for any Weapon Abilities (e.g. Lethal Hits)")
                 # modifiers
                 c1, c2, c3, c4 = st.columns(4)
                 hit_modifier = c1.number_input(
@@ -224,7 +232,8 @@ with main:
                     min_value = -1, 
                     max_value = 1, 
                     value = 0, 
-                    step = 1
+                    step = 1,
+                    key=f'{selected_unit}_hit_modifier'
                 )
                 # wound_roll = c2.number_input("Wound Roll", min_value = -1, max_value = 1, value = 0, step = 1)
                 save_roll = c3.number_input(
@@ -232,7 +241,8 @@ with main:
                     min_value = 2, 
                     max_value = 6, 
                     value = 3, 
-                    step=1
+                    step=1,
+                    key=f'{selected_unit}_save_roll'
                 )
                 # feel_no_pain = c4.number_input("Feel No Pain", min_value = 2, max_value = 7, value = 7, step = 1)
                 # display
@@ -241,10 +251,12 @@ with main:
                     "Num. Models Attacking",
                     min_value = 1, 
                     value = 1, 
-                    step = 1
+                    step = 1,
+                    key=f'{selected_unit}_num_models'
                 )
                 unit_weapons = sw_df[sw_df.UNITS == selected_unit]
-                for weapon in unit_weapons.index:
+                used_weapons = c1.multiselect("Weapons", options = unit_weapons.index, default = list(unit_weapons.index))
+                for weapon in used_weapons:
                     st.markdown(f"**Expected Hits with {weapon} and wound roll of**")
                     expected_hits = calculate_hits(
                         unit_weapons.loc[weapon],
