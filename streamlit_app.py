@@ -135,6 +135,7 @@ with st.sidebar:
     st.write("### Options")
     faction = st.selectbox("Select Faction", options = all_units.RACE.unique())
     show_image = st.checkbox("Show datasheet as image", value = True)
+    expand_collapse = st.checkbox("Expand / Collapse All", value = True)
     show_table = st.checkbox("Show datasheet as text", value = False)
     show_page_two = st.checkbox("Show second page", value = False)
     show_damage_calc = st.checkbox("Show Damage Calc", value = False)
@@ -204,7 +205,7 @@ with main:
     for selected_unit in selected_units:
         su_df = units[units.index == selected_unit] # selected_unit df
         sw_df = weapons[weapons.UNITS == selected_unit] # selected_weapon df
-        with st.expander(selected_unit, expanded= True):
+        with st.expander(selected_unit, expanded= expand_collapse):
             if show_image:
                 try:
                     page_1 = base64_to_image(images.loc[f"{selected_unit} (1)"].IMAGE_ENCODED)
