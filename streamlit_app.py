@@ -133,7 +133,7 @@ images.set_index("NAME", inplace=True)
 
 # Sidebar
 with st.sidebar:
-    st.write(f"Hi {st.session_state['user']}")
+    st.write(f"Hi {st.secrets[st.session_state['user']]['nickname']}")
     st.write("### Options")
     faction = st.selectbox("Select Faction", options = all_units.RACE.unique())
     show_image = st.checkbox("Show datasheet as image", value = True)
