@@ -104,6 +104,7 @@ if not st.session_state["authenticated"]:
         session = build_session(params)
         welcome_screen.empty()
         st.session_state['authenticated'] = True
+        st.session_state['user'] = username
 
 if not st.session_state.authenticated:
     st.stop()
@@ -132,6 +133,7 @@ images.set_index("NAME", inplace=True)
 
 # Sidebar
 with st.sidebar:
+    st.write(f"Hi {st.session_state['user']}")
     st.write("### Options")
     faction = st.selectbox("Select Faction", options = all_units.RACE.unique())
     show_image = st.checkbox("Show datasheet as image", value = True)
