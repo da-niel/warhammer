@@ -144,7 +144,9 @@ with st.sidebar:
     kwd = st.multiselect('Keyword Definions', options = keywords.index)
     if kwd:
         st.write(keywords.loc[kwd])
-
+    st.write("### Resources")
+    st.markdown("[WH40k Downloads](https://www.warhammer-community.com/warhammer-40000-downloads/)")
+    st.markdown("[Wahapedia Core Rules](https://wahapedia.ru/wh40k10ed/the-rules/core-rules/)")
     show_motto = st.checkbox(":eyes:", value = False)   
 
 
