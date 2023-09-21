@@ -8,7 +8,7 @@ from snowflake import snowpark
 st.set_page_config(
     layout='wide',
     page_title='40k Emporium',
-    page_icon=':crossed_swords:'
+    page_icon=':books:'
 )
 
 # DICE_ROLL to PROBABILITY mapping
