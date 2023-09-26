@@ -173,7 +173,9 @@ with st.sidebar:
     show_update_table = st.checkbox("Show Update Table", value = True)
     kwd = st.multiselect('Keyword Definions', options = keywords.index)
     if kwd:
-        st.write(keywords.loc[kwd])
+        for k in kwd:
+            st.write(f"### {k}")
+            st.write(keywords.loc[k, "DEFINITION"])
     st.write("### Resources")
     st.markdown("[WH40k Downloads](https://www.warhammer-community.com/warhammer-40000-downloads/)")
     st.markdown("[Wahapedia Core Rules](https://wahapedia.ru/wh40k10ed/the-rules/core-rules/)")
@@ -288,7 +290,12 @@ with main:
                     key=f'{selected_unit}_num_models'
                 )
                 unit_weapons = sw_df[sw_df.UNITS == selected_unit]
-                used_weapons = c1.multiselect("Weapons", options = unit_weapons.index, default = list(unit_weapons.index))
+                used_weapons = c1.multiselect(
+                    "Weapons", 
+                    options = unit_weapons.index, 
+                    default = list(unit_weapons.index),
+                    key=f'{selected_unit}_used_weapons'
+                )
                 for weapon in used_weapons:
                     st.markdown(f"**Expected Hits with {weapon} and wound roll of**")
                     expected_hits = calculate_hits(
