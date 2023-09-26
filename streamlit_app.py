@@ -2,8 +2,11 @@ import re, base64
 
 import streamlit as st
 import pandas as pd
+import numpy as np
 
 from snowflake import snowpark
+from snowflake.connector.errors import DatabaseError
+
 
 st.set_page_config(
     layout='wide',
@@ -23,11 +26,24 @@ PROB_MAP = {
 }
 
 @st.cache_resource
-def build_session(params):
+def build_session():
+    params = {
+        "account": st.secrets.snowflake_warhammer["ACCOUNT"],
+        "user": st.session_state['user'],
+        "password": st.session_state["password"],
+        "database": st.secrets.snowflake_warhammer["DATABASE"],
+        "schema": st.secrets.snowflake_warhammer["SCHEMA"]
+    }  
+
     return snowpark.Session.builder.configs(params).create()
+
+def run_query(query):
+    session = build_session()
+    return session.sql(query).collect()
 
 @st.cache_data
 def get_data(query):
+    session = build_session()
     return session.sql(query).to_pandas()
 
 def base64_to_image(encoded_string):
@@ -74,6 +90,21 @@ def process_keyword(kw):
     
     return kw
 
+def update_info(selected_unit:str):
+    query = f"""
+    update dim_units
+        set M={st.session_state[f"{selected_unit}_M"]},
+            T={st.session_state[f"{selected_unit}_T"]},
+            SV={st.session_state[f"{selected_unit}_SV"]},
+            ISV={st.session_state[f"{selected_unit}_ISV"]},
+            W={st.session_state[f"{selected_unit}_W"]},
+            LD={st.session_state[f"{selected_unit}_LD"]},
+            OC={st.session_state[f"{selected_unit}_OC"]}
+        where dim_units.NAME = '{selected_unit}'
+    """
+
+    return run_query(query)
+
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
 
@@ -92,19 +123,17 @@ if not st.session_state["authenticated"]:
                 login = st.form_submit_button("Login")
 
     if login:
-        params = {
-            "account": st.secrets.snowflake_warhammer["ACCOUNT"],
-            "user": username,
-            "password": password,
-            "database": st.secrets.snowflake_warhammer["DATABASE"],
-            "schema": st.secrets.snowflake_warhammer["SCHEMA"]
-        }  
-
-        # Session and data
-        session = build_session(params)
-        welcome_screen.empty()
-        st.session_state['authenticated'] = True
         st.session_state['user'] = username
+        st.session_state['password'] = password
+        # Session and data
+        try:
+            session = build_session()
+        except DatabaseError:
+            st.error("Incorrent username and/or password")
+        else:
+            welcome_screen.empty()
+            st.session_state['authenticated'] = True
+        
 
 if not st.session_state.authenticated:
     st.stop()
@@ -141,6 +170,7 @@ with st.sidebar:
     show_table = st.checkbox("Show datasheet as text", value = False)
     show_page_two = st.checkbox("Show second page", value = False)
     show_damage_calc = st.checkbox("Show Damage Calc", value = False)
+    show_update_table = st.checkbox("Show Update Table", value = True)
     kwd = st.multiselect('Keyword Definions', options = keywords.index)
     if kwd:
         st.write(keywords.loc[kwd])
@@ -268,3 +298,24 @@ with main:
                         save_roll=save_roll
                     )
                     st.write(pd.DataFrame(expected_hits)*n_models)
+
+            if show_update_table:
+                st.write("### Update Unit Stats")
+                update_cols = ["M", "T", "SV", "ISV", "W", "LD", "OC"]
+
+                with st.form(key=f"{selected_unit}_form"):
+                    update_st_cols = st.columns(len(update_cols))
+                    for i, col in enumerate(update_cols):
+                        value = su_df.loc[selected_unit, col].astype(int)
+
+                        if value < 0:
+                            value = 0
+
+                        
+                        update_st_cols[i].number_input(col, value = value, key=f"{selected_unit}_{col}")
+
+                    if st.form_submit_button("Update Info"):
+                        success = update_info(selected_unit)
+
+                        if success:
+                            st.write("Success!")
