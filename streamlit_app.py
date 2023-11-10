@@ -170,7 +170,7 @@ with st.sidebar:
     show_table = st.checkbox("Show datasheet as text", value = False)
     show_page_two = st.checkbox("Show second page", value = False)
     show_damage_calc = st.checkbox("Show Damage Calc", value = False)
-    show_update_table = st.checkbox("Show Update Table", value = True)
+    # show_update_table = st.checkbox("Show Update Table", value = True)
     kwd = st.multiselect('Keyword Definions', options = keywords.index)
     if kwd:
         for k in kwd:
@@ -306,23 +306,23 @@ with main:
                     )
                     st.write(pd.DataFrame(expected_hits)*n_models)
 
-            if show_update_table:
-                st.write("### Update Unit Stats")
-                update_cols = ["M", "T", "SV", "ISV", "W", "LD", "OC"]
+            # if show_update_table:
+            #     st.write("### Update Unit Stats")
+            #     update_cols = ["M", "T", "SV", "ISV", "W", "LD", "OC"]
 
-                with st.form(key=f"{selected_unit}_form"):
-                    update_st_cols = st.columns(len(update_cols))
-                    for i, col in enumerate(update_cols):
-                        value = su_df.loc[selected_unit, col].astype(int)
+            #     with st.form(key=f"{selected_unit}_form"):
+            #         update_st_cols = st.columns(len(update_cols))
+            #         for i, col in enumerate(update_cols):
+            #             value = su_df.loc[selected_unit, col].astype(int)
 
-                        if value < 0:
-                            value = 0
+            #             if value < 0:
+            #                 value = 0
 
                         
-                        update_st_cols[i].number_input(col, value = value, key=f"{selected_unit}_{col}")
+            #             update_st_cols[i].number_input(col, value = value, key=f"{selected_unit}_{col}")
 
-                    if st.form_submit_button("Update Info"):
-                        success = update_info(selected_unit)
+            #         if st.form_submit_button("Update Info"):
+            #             success = update_info(selected_unit)
 
-                        if success:
-                            st.write("Success!")
+            #             if success:
+            #                 st.write("Success!")
